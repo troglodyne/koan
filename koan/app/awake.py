@@ -669,7 +669,8 @@ def main():
 
     setup_github_auth()
 
-    provider_name = "telegram"  # about to become dynamic with provider abstraction
+    from app.messaging import _resolve_provider_name
+    provider_name = _resolve_provider_name()
     print_bridge_banner(f"messaging bridge — {provider_name.lower()}")
 
     # Record startup time — used to ignore stale signal files in the
