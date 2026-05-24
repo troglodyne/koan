@@ -83,7 +83,12 @@ def _get_last_message_id() -> int:
 
 
 def check_config():
-    if not BOT_TOKEN or not CHAT_ID:
+    # BOT_TOKEN / CHAT_ID are Telegram-specific.  Slack and Matrix users
+    # don't set them — defer the actual credential check to each
+    # provider's own ``configure()`` (called from get_messaging_provider
+    # below) so non-telegram providers don't get sys.exit(1)'d here.
+    from app.messaging import _resolve_provider_name
+    if _resolve_provider_name() == "telegram" and (not BOT_TOKEN or not CHAT_ID):
         log("error", "Set KOAN_TELEGRAM_TOKEN and KOAN_TELEGRAM_CHAT_ID env vars.")
         sys.exit(1)
     if not INSTANCE_DIR.exists():
@@ -680,8 +685,10 @@ def main():
     heartbeat_file = KOAN_ROOT / HEARTBEAT_FILE
     heartbeat_file.unlink(missing_ok=True)
     write_heartbeat(str(KOAN_ROOT))
-    log("init", f"Token: ...{BOT_TOKEN[-8:]}")
-    log("init", f"Chat ID: {CHAT_ID}")
+    if BOT_TOKEN:
+        log("init", f"Token: ...{BOT_TOKEN[-8:]}")
+    if CHAT_ID:
+        log("init", f"Chat ID: {CHAT_ID}")
     log("init", f"Soul: {len(SOUL)} chars loaded")
     log("init", f"Summary: {len(SUMMARY)} chars loaded")
     registry = _get_registry()
@@ -732,7 +739,13 @@ def main():
                 msg = update.get("message", {})
                 text = msg.get("text", "")
                 chat_id = str(msg.get("chat", {}).get("id", ""))
-                if chat_id == CHAT_ID and text:
+                # Match against either: (a) the active provider's channel
+                # id (resolved at startup — covers slack/matrix where
+                # CHAT_ID is unset), or (b) CHAT_ID (telegram-only, kept
+                # for backward compat with existing tests that patch it
+                # directly).  For telegram in production the two are the
+                # same value.
+                if text and chat_id in (str(channel_id), str(CHAT_ID)):
                     log("chat", f"Received: {text[:60]}")
                     try:
                         handle_message(text)

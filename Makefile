@@ -2,7 +2,7 @@
 export
 
 .PHONY: install onboard setup start stop status restart
-.PHONY: clean say migrate test test-skills test-strict coverage lint sync-instance rename-project release
+.PHONY: clean say migrate matrix-login test test-skills test-strict coverage lint sync-instance rename-project release
 .PHONY: awake run errand-run errand-awake dashboard
 .PHONY: ollama logs ssh-forward
 .PHONY: install-systemctl-service uninstall-systemctl-service
@@ -106,6 +106,15 @@ release: setup
 
 migrate: setup
 	cd koan && KOAN_ROOT=$(PWD) PYTHONPATH=. ../$(PYTHON) app/migrate_memory.py
+
+# One-shot Matrix bootstrap: logs in with KOAN_MATRIX_PASSWORD, mints a fresh
+# device, writes instance/matrix/credentials.env (0600).  Run once per host.
+# Required env: KOAN_MATRIX_HOMESERVER, KOAN_MATRIX_USER_ID, KOAN_MATRIX_PASSWORD.
+matrix-login: setup
+	@test -n "$$KOAN_MATRIX_HOMESERVER" || (echo "set KOAN_MATRIX_HOMESERVER" && exit 1)
+	@test -n "$$KOAN_MATRIX_USER_ID"    || (echo "set KOAN_MATRIX_USER_ID" && exit 1)
+	@test -n "$$KOAN_MATRIX_PASSWORD"   || (echo "set KOAN_MATRIX_PASSWORD" && exit 1)
+	cd koan && KOAN_ROOT=$(PWD) PYTHONPATH=. ../$(PYTHON) -m app.matrix_login
 
 dashboard: setup
 	cd koan && KOAN_ROOT=$(PWD) PYTHONPATH=. ../$(PYTHON) app/dashboard.py

@@ -8,3 +8,7 @@ pytest-xdist>=3.5
 
 # Optional: Slack provider (install with: pip install slack-sdk)
 # slack-sdk>=3.27
+
+# Matrix provider with Megolm/Olm E2EE.  Requires libolm-dev +
+# build-essential at install time so the python-olm wheel can compile.
+matrix-nio[e2e]>=0.24
